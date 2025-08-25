@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.19",
-    "@google-cloud/storage": "^7.17.0",
     "ai": "^5.0.22",
     "google-auth-library": "^10.2.1",
     "googleapis": "^157.0.0",

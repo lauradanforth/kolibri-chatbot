@@ -17,6 +17,11 @@ export async function POST(req: NextRequest) {
       const relevantDocs = await googleDriveService.getRelevantDocuments(userMessage.content);
       documentsUsed = relevantDocs;
       
+      console.log(`🔍 Found ${relevantDocs.length} relevant documents for query: "${userMessage.content}"`);
+      relevantDocs.forEach((doc, i) => {
+        console.log(`  ${i + 1}. ${doc.name} (${doc.content?.length || 0} chars)`);
+      });
+      
       if (relevantDocs.length > 0) {
         contextDocuments = '\n\nRelevant documents from Kolibri documentation:\n';
         documentEvidence = '\n\n📚 **Documents Referenced:**\n';
@@ -30,16 +35,16 @@ export async function POST(req: NextRequest) {
           contextDocuments += `${doc.content}\n`;
           contextDocuments += `Source: ${doc.webViewLink}\n`;
           
-          documentEvidence += `• **${doc.name}`;
-          if (doc.parentFolder && doc.parentFolder !== 'Root Folder') {
-            documentEvidence += `** (in ${doc.parentFolder})`;
-          } else {
-            documentEvidence += `**`;
-          }
-          documentEvidence += ` - [View Document](${doc.webViewLink})\n`;
+                  documentEvidence += `• **${doc.name}`;
+        if (doc.parentFolder && doc.parentFolder !== 'Root Folder') {
+          documentEvidence += `** (in ${doc.parentFolder})`;
+        } else {
+          documentEvidence += `**`;
+        }
+        documentEvidence += ` - [View Document](${doc.webViewLink})\n\n`;
         });
         
-        documentEvidence += `\n*I found ${relevantDocs.length} relevant document(s) from your Kolibri documentation folder.*\n\n`;
+        documentEvidence += `\n*I found ${relevantDocs.length} relevant document(s) from your Kolibri documentation folder.*\n\n---\n\n`;
       } else {
         // No documents found - tell the user
         return new Response(JSON.stringify({
@@ -81,7 +86,9 @@ IMPORTANT RULES:
 2. If asked about something not covered in the documents, say "I don't have information about that in the available documents"
 3. Always cite the specific document name when providing information
 4. Provide the source link when referencing documents
-5. Start your response with the document evidence provided
+5. YOUR RESPONSE MUST START WITH THIS EXACT TEXT: ${documentEvidence}
+6. After the document evidence, provide your answer based on the documents with proper paragraph spacing
+7. Format your response with clear separation between the document references and your answer
 
 Keep responses friendly, informative, and focused on helping users understand and use Kolibri effectively based on the official documentation.`;
 

@@ -257,17 +257,18 @@ export class GoogleDriveService {
       // Try vector search first (if available)
       const vectorResults = await aiSDKVectorSearchService.searchDocuments(query, topK);
       
-              if (vectorResults.length > 0) {
-          console.log('🔍 Using vector search results');
-          return vectorResults.map(result => ({
-            id: result.documentId,
-            name: result.documentName,
-            parentFolder: result.parentFolder,
-            content: result.content,
-            relevanceScore: result.similarity,
-            searchMethod: 'vector',
-          }));
-        }
+      if (vectorResults.length > 0) {
+        console.log('🔍 Using vector search results');
+        return vectorResults.map(result => ({
+          id: result.documentId,
+          name: result.documentName,
+          parentFolder: result.parentFolder,
+          content: result.content,
+          relevanceScore: result.similarity,
+          searchMethod: 'vector',
+          webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`, // Add webViewLink for chat API
+        }));
+      }
     } catch (error) {
       console.warn('⚠️ Vector search failed, falling back to keyword search:', error);
     }

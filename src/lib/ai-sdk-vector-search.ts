@@ -274,6 +274,13 @@ export class AISDKVectorSearchService {
   }
 
   /**
+   * Get document chunks for analysis
+   */
+  getDocumentChunks() {
+    return this.documentChunks;
+  }
+
+  /**
    * Clear all indexed data
    */
   clearIndex() {

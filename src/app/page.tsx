@@ -121,12 +121,32 @@ export default function ChatPage() {
           <div className="text-center text-gray-500 mt-8">
             <p>Welcome! I'm here to help you learn about Kolibri using official documentation.</p>
             <p className="mt-2">Try asking me something like:</p>
-            <ul className="mt-2 space-y-1 text-sm">
-              <li>• "Tell me about Kolibri v0.16 features"</li>
-              <li>• "How do I set up hardware for Kolibri?"</li>
-              <li>• "What's in the blended learning guide?"</li>
-              <li>• "Show me the Lewa Wildlife Conservancy case study"</li>
-            </ul>
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={() => setInput("Tell me about Kolibri v0.16 features")}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Tell me about Kolibri v0.16 features
+              </button>
+              <button
+                onClick={() => setInput("How do I set up hardware for Kolibri?")}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                How do I set up hardware for Kolibri?
+              </button>
+              <button
+                onClick={() => setInput("What's in the blended learning guide?")}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                What's in the blended learning guide?
+              </button>
+              <button
+                onClick={() => setInput("Show me the Lewa Wildlife Conservancy case study")}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Show me the Lewa Wildlife Conservancy case study
+              </button>
+            </div>
             <p className="mt-4 text-xs text-gray-400">
               💡 I only respond with information from the official Kolibri documentation
             </p>
@@ -147,7 +167,32 @@ export default function ChatPage() {
                   : 'bg-white border border-gray-200 text-gray-900'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none">
+                {message.content.split('\n').map((line, index) => {
+                  // Style document references section
+                  if (line.includes('📚 **Documents Referenced:**')) {
+                    return (
+                      <div key={index} className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-blue-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style document links
+                  if (line.includes('• **') && line.includes('[View Document]')) {
+                    return (
+                      <p key={index} className="text-blue-700 hover:text-blue-900 mb-1">
+                        {line}
+                      </p>
+                    );
+                  }
+                  // Style separator line
+                  if (line.includes('---')) {
+                    return <hr key={index} className="my-3 border-gray-300" />;
+                  }
+                  // Regular text
+                  return <p key={index} className="mb-1">{line}</p>;
+                })}
+              </div>
             </div>
           </div>
         ))}
@@ -168,7 +213,7 @@ export default function ChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about Kolibri documentation..."
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isLoading}
           />
           <button

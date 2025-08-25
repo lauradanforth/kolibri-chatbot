@@ -69,17 +69,18 @@ Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## 🔍 Vector Search Features
 
-The chatbot now includes advanced vector search capabilities:
+The chatbot includes advanced vector search using **AI SDK embeddings**:
 
 ### How it works:
 1. **Document Indexing**: Documents are split into chunks and converted to embeddings
 2. **Semantic Search**: User queries are converted to embeddings and matched semantically
-3. **Hybrid Approach**: Combines vector search with keyword search for best results
+3. **In-Memory Storage**: Fast, local storage with file persistence
 
 ### Benefits:
 - **Better Understanding**: Finds conceptually related content, not just exact matches
 - **Improved Accuracy**: More relevant responses even with different word choices
 - **Context Awareness**: Understands user intent and context
+- **No External Dependencies**: Uses only OpenAI API, no vector databases needed
 
 ### Usage:
 1. **Index Documents**: `POST /api/index-documents` (one-time setup)

@@ -1,6 +1,8 @@
 import { google } from 'googleapis';
 import { GoogleAuth } from 'google-auth-library';
 
+import { aiSDKVectorSearchService } from './ai-sdk-vector-search';
+
 // Google Drive API configuration
 const FOLDER_ID = '11OBGEVcpY_e3wkWIbYf51yZiAz_-JIsV';
 
@@ -211,32 +213,86 @@ export class GoogleDriveService {
     return score;
   }
 
-  async getRelevantDocuments(userQuery: string): Promise<DriveDocument[]> {
+  /**
+   * Index all documents in the vector database for semantic search
+   */
+  async indexDocumentsForVectorSearch() {
     try {
-      // First try exact search
-      let relevantDocs = await this.searchDocuments(userQuery);
+      console.log('🔄 Indexing documents for vector search...');
       
-      // If no results, try with key terms
-      if (relevantDocs.length === 0) {
-        const keyTerms = this.extractKeyTerms(userQuery);
-        for (const term of keyTerms) {
-          const docs = await this.searchDocuments(term);
-          relevantDocs.push(...docs);
+      const documents = await this.listDocuments();
+      const documentsWithContent = [];
+      
+      for (const doc of documents) {
+        try {
+          const content = await this.getDocumentContent(doc.id, doc.mimeType);
+          if (content && content.length > 50) { // Only index substantial content
+            documentsWithContent.push({
+              id: doc.id,
+              name: doc.name,
+              content,
+              parentFolder: doc.parentFolder,
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to get content for ${doc.name}:`, error);
         }
-        
-        // Remove duplicates and sort by relevance
-        const uniqueDocs = Array.from(
-          new Map(relevantDocs.map(doc => [doc.id, doc])).values()
-        );
-        uniqueDocs.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
-        relevantDocs = uniqueDocs;
       }
-
-      return relevantDocs.slice(0, 5); // Return top 5 most relevant documents
+      
+      await aiSDKVectorSearchService.indexDocuments(documentsWithContent);
+      console.log(`✅ Indexed ${documentsWithContent.length} documents for vector search`);
+      
+      return documentsWithContent.length;
     } catch (error) {
-      console.error('Error getting relevant documents:', error);
+      console.error('❌ Failed to index documents for vector search:', error);
       throw error;
     }
+  }
+
+  /**
+   * Enhanced search that combines keyword and vector search
+   */
+  async enhancedSearchDocuments(query: string, topK: number = 5) {
+    try {
+      // Try vector search first (if available)
+      const vectorResults = await aiSDKVectorSearchService.searchDocuments(query, topK);
+      
+              if (vectorResults.length > 0) {
+          console.log('🔍 Using vector search results');
+          return vectorResults.map(result => ({
+            id: result.documentId,
+            name: result.documentName,
+            parentFolder: result.parentFolder,
+            content: result.content,
+            relevanceScore: result.similarity,
+            searchMethod: 'vector',
+          }));
+        }
+    } catch (error) {
+      console.warn('⚠️ Vector search failed, falling back to keyword search:', error);
+    }
+    
+    // Fallback to keyword search
+    console.log('🔍 Using keyword search results');
+    return this.searchDocuments(query);
+  }
+
+  /**
+   * Get relevant documents with enhanced search capabilities
+   */
+  async getRelevantDocuments(query: string, topK: number = 5) {
+    // Use enhanced search if vector search is available
+    try {
+      const status = aiSDKVectorSearchService.getIndexingStatus();
+      if (status.isIndexed && status.totalChunks > 0) {
+        return this.enhancedSearchDocuments(query, topK);
+      }
+    } catch (error) {
+      console.warn('Vector search not available, using keyword search');
+    }
+    
+    // Fallback to original keyword search
+    return this.searchDocuments(query);
   }
 
   private extractKeyTerms(query: string): string[] {

@@ -10,10 +10,11 @@ npm install
 ```
 
 ### 2. Set up Environment Variables
-Create a `.env.local` file in the root directory and add your OpenAI API key:
+Create a `.env.local` file in the root directory and add your API keys:
 
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
+GOOGLE_APPLICATION_CREDENTIALS=./your-service-account-key.json
 ```
 
 To get an OpenAI API key:
@@ -21,6 +22,13 @@ To get an OpenAI API key:
 2. Sign up or log in
 3. Create a new API key
 4. Copy it to your `.env.local` file
+
+To set up Google Drive access:
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable Google Drive API and Google Docs API
+4. Create a service account and download the JSON key
+5. Place the JSON file in your project root and update the path in `.env.local`
 
 ### 3. Start Development Server
 ```bash
@@ -33,24 +41,50 @@ Navigate to [http://localhost:3000](http://localhost:3000)
 ## 🎯 Features
 
 - **Simple Chat Interface**: Clean, responsive chat UI
-- **Kolibri Knowledge**: Pre-configured with Kolibri information
+- **Google Drive Integration**: Access documents from your Google Drive folder
+- **Content-Based Search**: Find relevant information within document content
+- **Vector Search**: Semantic search using AI embeddings for better understanding
 - **Real-time Responses**: Streaming responses from OpenAI
-- **Local Development**: No external databases or services required
+- **Document Citations**: See which documents were used to generate responses
 
 ## 🛠️ Technical Stack
 
 - **Frontend**: Next.js 14 with TypeScript and Tailwind CSS
 - **AI**: OpenAI GPT-3.5-turbo via AI SDK
+- **Vector Search**: OpenAI text-embedding-3-small via AI SDK
+- **Google Drive**: Google Drive API and Google Docs API
 - **Styling**: Tailwind CSS for responsive design
 - **State Management**: React hooks with AI SDK
 
 ## 📋 What's Included
 
-- ✅ Basic chat interface
-- ✅ Kolibri-focused system prompt
+- ✅ Chat interface with document-based responses
+- ✅ Google Drive integration for document access
+- ✅ Content-based search within documents
+- ✅ Vector search using AI embeddings
 - ✅ Real-time message streaming
+- ✅ Document citations and links
 - ✅ Responsive design
 - ✅ TypeScript support
+
+## 🔍 Vector Search Features
+
+The chatbot now includes advanced vector search capabilities:
+
+### How it works:
+1. **Document Indexing**: Documents are split into chunks and converted to embeddings
+2. **Semantic Search**: User queries are converted to embeddings and matched semantically
+3. **Hybrid Approach**: Combines vector search with keyword search for best results
+
+### Benefits:
+- **Better Understanding**: Finds conceptually related content, not just exact matches
+- **Improved Accuracy**: More relevant responses even with different word choices
+- **Context Awareness**: Understands user intent and context
+
+### Usage:
+1. **Index Documents**: `POST /api/index-documents` (one-time setup)
+2. **Test Search**: `POST /api/test-vector-search` with `{"query": "your question"}`
+3. **Automatic**: The chatbot automatically uses vector search when available
 
 ## 🔄 Next Steps (Future Enhancements)
 

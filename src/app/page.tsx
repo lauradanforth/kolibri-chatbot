@@ -119,36 +119,36 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-8">
-            <p>Welcome! I'm here to help you learn about Kolibri using official documentation.</p>
+            <p>Welcome! I'm here to help you get started with using Kolibri.</p>
             <p className="mt-2">Try asking me something like:</p>
             <div className="mt-4 space-y-2">
               <button
-                onClick={() => setInput("Tell me about Kolibri v0.16 features")}
+                onClick={() => setInput("What assessment types are available in Kolibri?")}
                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
               >
-                Tell me about Kolibri v0.16 features
+                What assessment types are available in Kolibri?
               </button>
               <button
-                onClick={() => setInput("How do I set up hardware for Kolibri?")}
+                onClick={() => setInput("What hardware is needed for Kolibri?")}
                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
               >
-                How do I set up hardware for Kolibri?
+                What hardware is needed for Kolibri?
               </button>
               <button
-                onClick={() => setInput("What's in the blended learning guide?")}
+                onClick={() => setInput("What is an example of Project Based Learning with Kolibri?")}
                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
               >
-                What's in the blended learning guide?
+                What is an example of Project Based Learning with Kolibri?
               </button>
               <button
-                onClick={() => setInput("Show me the Lewa Wildlife Conservancy case study")}
+                onClick={() => setInput("Tell me about learner data syncing in Kolibri")}
                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
               >
-                Show me the Lewa Wildlife Conservancy case study
+                Tell me about learner data syncing in Kolibri
               </button>
             </div>
             <p className="mt-4 text-xs text-gray-400">
-              💡 I only respond with information from the official Kolibri documentation
+              💡 I only respond with information from documentation created by the Learning Equality team
             </p>
           </div>
         )}

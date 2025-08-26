@@ -23,8 +23,9 @@ export class GoogleDriveService {
 
   constructor() {
     // Use service account authentication with the JSON key file
+    const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || './learninge-291168aade81.json';
     const auth = new GoogleAuth({
-      keyFile: './learninge-291168aade81.json',
+      keyFile,
       scopes: [
         'https://www.googleapis.com/auth/drive.readonly',
         'https://www.googleapis.com/auth/documents.readonly'
@@ -259,15 +260,38 @@ export class GoogleDriveService {
       
       if (vectorResults.length > 0) {
         console.log('🔍 Using vector search results');
-        return vectorResults.map(result => ({
-          id: result.documentId,
-          name: result.documentName,
-          parentFolder: result.parentFolder,
-          content: result.content,
-          relevanceScore: result.similarity,
-          searchMethod: 'vector',
-          webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`, // Add webViewLink for chat API
-        }));
+        const enhancedResults = [];
+        
+        for (const result of vectorResults) {
+          try {
+            // Get the full document content from Google Drive
+            const fullContent = await this.getDocumentContent(result.documentId, 'application/vnd.google-apps.document');
+            
+            enhancedResults.push({
+              id: result.documentId,
+              name: result.documentName,
+              parentFolder: result.parentFolder,
+              content: fullContent, // Use full content instead of chunked content
+              relevanceScore: result.similarity,
+              searchMethod: 'vector',
+              webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`,
+            });
+          } catch (error) {
+            console.warn(`Failed to get full content for ${result.documentName}:`, error);
+            // Fall back to the chunked content if full content retrieval fails
+            enhancedResults.push({
+              id: result.documentId,
+              name: result.documentName,
+              parentFolder: result.parentFolder,
+              content: result.content,
+              relevanceScore: result.similarity,
+              searchMethod: 'vector',
+              webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`,
+            });
+          }
+        }
+        
+        return enhancedResults;
       }
     } catch (error) {
       console.warn('⚠️ Vector search failed, falling back to keyword search:', error);

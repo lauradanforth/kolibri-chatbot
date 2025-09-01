@@ -2,6 +2,7 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { NextRequest } from 'next/server';
 import { googleDriveService } from '@/lib/google-drive';
+import { findRelevantSections } from '@/lib/kolibri-guide-sections';
 
 // Helper function to detect training-related queries
 function isTrainingQuestion(content: string): boolean {
@@ -42,6 +43,110 @@ function isToolkitQuestion(content: string): boolean {
   return toolkitKeywords.some(keyword => lowerContent.includes(keyword));
 }
 
+// Helper function to detect download-related queries
+function isDownloadQuestion(content: string): boolean {
+  const downloadKeywords = [
+    'download', 'download kolibri', 'get kolibri', 'install kolibri', 'how to download',
+    'where to download', 'download link', 'download page', 'kolibri download',
+    'i would like to download', 'want to download', 'need to download'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return downloadKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect resource/library-related queries
+function isResourceQuestion(content: string): boolean {
+  const resourceKeywords = [
+    'resources', 'library', 'content', 'materials', 'educational resources',
+    'open educational resources', 'oer', 'what resources', 'available resources',
+    'know more about resources', 'browse resources', 'catalog', 'kolibri library',
+    'learning materials', 'educational content', 'what content is available'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return resourceKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect Studio/curation-related queries
+function isStudioQuestion(content: string): boolean {
+  const studioKeywords = [
+    'studio', 'kolibri studio', 'add resources', 'my own resources', 'curate',
+    'curation', 'create content', 'upload resources', 'build channels',
+    'organize resources', 'curriculum tool', 'offline use', 'create account',
+    'studio account', 'add my own', 'curate with existing'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return studioKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect feedback/suggestion-related queries
+function isFeedbackQuestion(content: string): boolean {
+  const feedbackKeywords = [
+    'feedback', 'suggestions', 'propose', 'new features', 'feature request',
+    'improve', 'enhancement', 'make suggestions', 'give feedback',
+    'propose features', 'content feedback', 'suggest improvements',
+    'request feature', 'community forum'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return feedbackKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect bug/issue-related queries
+function isBugQuestion(content: string): boolean {
+  const bugKeywords = [
+    'bug', 'found a bug', 'bug report', 'report issue', 'technical issue',
+    'problem', 'error', 'broken', 'not working', 'issue with', 'defect',
+    'glitch', 'crash', 'freeze', 'malfunction', 'technical problem'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return bugKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect technical support-related queries
+function isTechnicalSupportQuestion(content: string): boolean {
+  const supportKeywords = [
+    'technical support', 'help with', 'need help', 'technical challenge',
+    'technical problem', 'support', 'assistance', 'troubleshoot',
+    'troubleshooting', 'technical assistance', 'help me', 'how to fix',
+    'technical issue', 'problem with', 'not working', 'error',
+    'broken', 'crash', 'freeze', 'malfunction', 'technical help'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return supportKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect demo/exploration-related queries
+function isDemoQuestion(content: string): boolean {
+  const demoKeywords = [
+    'demo', 'demonstration', 'explore', 'try out', 'test drive',
+    'sample', 'preview', 'see how it works', 'experience',
+    'online version', 'demo site', 'demo version', 'play with',
+    'hands on', 'interactive demo', 'live demo'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return demoKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect user guide/manual-related queries
+function isUserGuideQuestion(content: string): boolean {
+  const guideKeywords = [
+    'manual', 'user guide', 'documentation', 'read the manual',
+    'setup guide', 'installation guide', 'how to use', 'tutorial',
+    'learn how to', 'understand features', 'get started',
+    'beginner guide', 'reference manual', 'help documentation',
+    'user manual', 'setup instructions', 'usage guide'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return guideKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json();
@@ -53,20 +158,55 @@ export async function POST(req: NextRequest) {
     let documentsUsed: any[] = [];
     
     try {
-      // Check if this is a training-related, language-related, or toolkit-related query
+      // Check if this is a training-related, language-related, toolkit-related, download-related, resource-related, studio-related, feedback-related, bug-related, technical support-related, demo-related, or user guide-related query
       const isTrainingQuery = isTrainingQuestion(userMessage.content);
       const isLanguageQuery = isLanguageQuestion(userMessage.content);
       const isToolkitQuery = isToolkitQuestion(userMessage.content);
+      const isDownloadQuery = isDownloadQuestion(userMessage.content);
+      console.log(`🔍 Download query detection: "${userMessage.content}" -> ${isDownloadQuery}`);
+      const isResourceQuery = isResourceQuestion(userMessage.content);
+      const isStudioQuery = isStudioQuestion(userMessage.content);
+      const isFeedbackQuery = isFeedbackQuestion(userMessage.content);
+      const isBugQuery = isBugQuestion(userMessage.content);
+      const isTechnicalSupportQuery = isTechnicalSupportQuestion(userMessage.content);
+      const isDemoQuery = isDemoQuestion(userMessage.content);
+      const isUserGuideQuery = isUserGuideQuestion(userMessage.content);
       
       const relevantDocs = await googleDriveService.getRelevantDocuments(userMessage.content);
-      documentsUsed = relevantDocs;
       
-      console.log(`🔍 Found ${relevantDocs.length} relevant documents for query: "${userMessage.content}"`);
-      relevantDocs.forEach((doc, i) => {
-        console.log(`  ${i + 1}. ${doc.name} (${doc.content?.length || 0} chars)`);
+      // Find relevant Kolibri User Guide sections
+      const relevantGuideSections = findRelevantSections(userMessage.content);
+      
+      console.log(`🔍 Guide sections search for: "${userMessage.content}"`);
+      console.log(`🔍 Found ${relevantGuideSections.length} relevant guide sections:`);
+      relevantGuideSections.forEach((section, index) => {
+        console.log(`  ${index + 1}. ${section.title} - ${section.url}`);
       });
       
-      if (relevantDocs.length > 0) {
+      // Combine both sources of information
+      const allRelevantDocs = [...relevantDocs];
+      
+      // Add relevant guide sections as "documents" for context
+      relevantGuideSections.forEach((section, index) => {
+        allRelevantDocs.push({
+          id: `guide-${section.id}`,
+          name: section.title,
+          content: section.description,
+          webViewLink: section.url,
+          parentFolder: 'Kolibri User Guide',
+          relevanceScore: 1.0,
+          searchMethod: 'guide-section'
+        });
+      });
+      
+      documentsUsed = allRelevantDocs;
+      
+      console.log(`🔍 Found ${allRelevantDocs.length} total relevant sources (${relevantDocs.length} Google Drive + ${relevantGuideSections.length} Guide Sections)`);
+      allRelevantDocs.forEach((doc, i) => {
+        console.log(`  ${i + 1}. ${doc.name} (${doc.content?.length || 0} chars) - ${doc.parentFolder}`);
+      });
+      
+      if (allRelevantDocs.length > 0) {
         contextDocuments = '\n\nRelevant documents from Kolibri documentation:\n';
         
         // Special handling for training queries
@@ -97,6 +237,120 @@ export async function POST(req: NextRequest) {
           documentEvidence = '\n\n📚 **Kolibri Edtech Toolkit v4:**\n\n';
           documentEvidence += `**📁 Main Toolkit Folder** - [Open Toolkit](https://drive.google.com/drive/folders/1s4Dp4SLz0FXcfs5F5yMCkVCD5DKRGayl?usp=drive_link)\n\n`;
           documentEvidence += `**📖 Detailed Information:** [Kolibri Edtech Toolkit v4 README](https://docs.google.com/document/d/1cg5ZnmCs66tGLfNNXWBQLOzmp8VJagjfwKai9fSe3J8/edit?tab=t.0) - Complete overview of toolkit contents, structure, and how to use it\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isDownloadQuery) {
+          // Special handling for download queries
+          documentEvidence = '\n\n💾 **Download Kolibri:**\n\n';
+          documentEvidence += `**🔗 Official Download Page:** [Download Kolibri](https://learningequality.org/download/) - Get the latest version for your platform\n\n`;
+          documentEvidence += `**📱 Available Platforms:**\n`;
+          documentEvidence += `• **Windows** - .exe installer with launcher and tray icon\n`;
+          documentEvidence += `• **Ubuntu/Debian** - .deb package with automatic updates\n`;
+          documentEvidence += `• **Raspberry Pi** - Configure as server and hotspot\n`;
+          documentEvidence += `• **MacOS** - Stand-alone app (not for server use)\n`;
+          documentEvidence += `• **Python** - Portable executable for Python 3.6+\n\n`;
+          documentEvidence += `**🌍 Language Support:** Available in 30+ languages including English, Arabic, French, Hindi, Spanish, Swahili, and more\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isResourceQuery) {
+          // Special handling for resource/library queries
+          documentEvidence = '\n\n📚 **Kolibri Library & Resources:**\n\n';
+          documentEvidence += `**🔗 Public Resource Catalog:** [Browse Kolibri Library](https://catalog.learningequality.org/#/public) - Explore open educational resources available for use in Kolibri\n\n`;
+          documentEvidence += `**📖 What You'll Find:**\n`;
+          documentEvidence += `• **Open Educational Resources (OER)** - Freely available learning materials\n`;
+          documentEvidence += `• **Subject Coverage** - Math, Science, Language Arts, Social Studies, and more\n`;
+          documentEvidence += `• **Content Types** - Videos, interactive exercises, documents, and assessments\n`;
+          documentEvidence += `• **Grade Levels** - Materials for K-12 and adult learners\n`;
+          documentEvidence += `• **Multilingual Content** - Resources in various languages\n\n`;
+          documentEvidence += `**💡 Tip:** Use the catalog to discover content you can import into your Kolibri installation\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isStudioQuery) {
+          // Special handling for Studio/curation queries
+          documentEvidence = '\n\n🎨 **Kolibri Studio - Content Creation & Curation:**\n\n';
+          documentEvidence += `**🔗 Create Studio Account:** [Kolibri Studio](https://studio.learningequality.org/en/accounts/#/) - Online curriculum tool for organizing and curating learning resources\n\n`;
+          documentEvidence += `**📖 User Guide:** [Kolibri Studio User Guide](https://kolibri-studio.readthedocs.io/en/latest/) - Comprehensive documentation on how to use Studio effectively\n\n`;
+          documentEvidence += `**🚀 What You Can Do:**\n`;
+          documentEvidence += `• **Add Your Own Resources** - Upload and organize your learning materials\n`;
+          documentEvidence += `• **Curate Existing Content** - Select and organize resources from the public library\n`;
+          documentEvidence += `• **Build Custom Channels** - Create personalized learning pathways\n`;
+          documentEvidence += `• **Organize Curriculum** - Structure content for specific learning objectives\n`;
+          documentEvidence += `• **Prepare for Offline Use** - Build channels that work in Kolibri installations\n\n`;
+          documentEvidence += `**💡 Perfect For:** Educators, content creators, curriculum developers, and organizations wanting to customize their Kolibri experience\n\n`;
+          documentEvidence += `**📚 Learn More:** The user guide covers channel management, resource selection, best practices, and community standards for creating inclusive learning content\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isFeedbackQuery) {
+          // Special handling for feedback/suggestion queries
+          documentEvidence = '\n\n💬 **Community Engagement & Feedback:**\n\n';
+          documentEvidence += `**🔗 Community Forum:** [Learning Equality Community](https://community.learningequality.org/) - Join our community to share feedback, suggestions, and connect with other users\n\n`;
+          documentEvidence += `**💡 How You Can Contribute:**\n`;
+          documentEvidence += `• **Make Suggestions** - Propose new features and improvements\n`;
+          documentEvidence += `• **Provide Feedback** - Share your experience with existing features and content\n`;
+          documentEvidence += `• **Report Issues** - Help identify bugs and technical challenges\n`;
+          documentEvidence += `• **Share Stories** - Connect with other implementers and share success stories\n`;
+          documentEvidence += `• **Plan Together** - Collaborate on implementation strategies and best practices\n\n`;
+          documentEvidence += `**🌍 Community Categories:** Support, Content & Materials, Implementation Planning, Success Stories, and more\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isBugQuery) {
+          // Special handling for bug/issue queries
+          documentEvidence = '\n\n🐛 **Bug Report & Issue Tracking:**\n\n';
+          documentEvidence += `**🔗 GitHub Issues:** [Kolibri GitHub Issues](https://github.com/learningequality/kolibri/issues) - Report bugs and track technical issues\n\n`;
+          documentEvidence += `**📋 Before Creating an Issue:**\n`;
+          documentEvidence += `• **Search Existing Issues** - Check if your bug has already been reported\n`;
+          documentEvidence += `• **Use the Template** - Follow the provided issue template for better tracking\n`;
+          documentEvidence += `• **Include Details** - Provide clear steps to reproduce the problem\n`;
+          documentEvidence += `• **System Information** - Include your OS, Kolibri version, and error messages\n\n`;
+          documentEvidence += `**💡 For Community Support:** If you prefer community help, visit our [Support Forum](https://community.learningequality.org/c/support/11)\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isTechnicalSupportQuery) {
+          // Special handling for technical support queries
+          documentEvidence = '\n\n🔧 **Technical Support & Assistance:**\n\n';
+          documentEvidence += `**🔗 Community Support Forum:** [Learning Equality Community Support](https://community.learningequality.org/c/support/11) - Get help from the team and community\n\n`;
+          documentEvidence += `**💬 How to Get Help:**\n`;
+          documentEvidence += `• **Search First** - Check if your question has already been answered\n`;
+          documentEvidence += `• **Be Specific** - Describe your technical challenge clearly\n`;
+          documentEvidence += `• **Include Context** - Mention your setup, version, and what you're trying to do\n`;
+          documentEvidence += `• **Community Response** - Get help from experienced users and the Learning Equality team\n\n`;
+          documentEvidence += `**📚 Support Categories:** Kolibri, Studio, Hardware, Installation, Content, and more\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isDemoQuery) {
+          // Special handling for demo/exploration queries
+          documentEvidence = '\n\n🎮 **Kolibri Demo & Exploration:**\n\n';
+          documentEvidence += `**🔗 Live Demo Site:** [Kolibri Demo](https://kolibri-demo.learningequality.org/) - Explore Kolibri online before downloading\n\n`;
+          documentEvidence += `**✨ What You Can Experience:**\n`;
+          documentEvidence += `• **Interactive Learning** - Try out Kolibri's features firsthand\n`;
+          documentEvidence += `• **Content Exploration** - Browse sample educational resources\n`;
+          documentEvidence += `• **User Interface** - Familiarize yourself with the platform layout\n`;
+          documentEvidence += `• **Feature Testing** - Experience how teaching and learning works\n`;
+          documentEvidence += `• **No Installation Required** - Access directly from your browser\n\n`;
+          documentEvidence += `**📱 Demo Access Options:**\n`;
+          documentEvidence += `• **Guest Access** - Explore without creating an account\n`;
+          documentEvidence += `• **Learner Account** - Experience the student perspective\n`;
+          documentEvidence += `• **Coach Account** - Try out teacher/administrator features\n\n`;
+          documentEvidence += `**💡 Perfect For:** Educators, administrators, and anyone wanting to see Kolibri in action before implementation\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isUserGuideQuery) {
+          // Special handling for user guide/manual queries
+          const relevantSections = findRelevantSections(userMessage.content);
+          
+          documentEvidence = '\n\n📖 **Kolibri User Guide & Documentation:**\n\n';
+          documentEvidence += `**🔗 Official User Guide:** [Kolibri User Guide](https://kolibri.readthedocs.io/en/latest/) - Comprehensive documentation for setup and usage\n\n`;
+          
+          if (relevantSections.length > 0) {
+            documentEvidence += `**🎯 Most Relevant Sections for Your Query:**\n`;
+            relevantSections.forEach(section => {
+              documentEvidence += `• **[${section.title}](${section.url})** - ${section.description}\n`;
+            });
+            documentEvidence += `\n`;
+          }
+          
+          documentEvidence += `**📚 All Available Sections:**\n`;
+          documentEvidence += `• **Installation & Setup** - Platform-specific installation instructions\n`;
+          documentEvidence += `• **Getting Started** - Initial setup and basic configuration\n`;
+          documentEvidence += `• **User Management** - Creating users, classes, and managing permissions\n`;
+          documentEvidence += `• **Content Management** - Importing channels and organizing resources\n`;
+          documentEvidence += `• **Teaching Tools** - Creating lessons, quizzes, and tracking progress\n`;
+          documentEvidence += `• **Device Management** - Device settings and network configuration\n`;
+          documentEvidence += `• **Advanced Management** - Command line usage and advanced configuration\n`;
+          documentEvidence += `• **Troubleshooting** - Common issues and solutions\n\n`;
+          documentEvidence += `**💡 Perfect For:** New users, system administrators, educators setting up Kolibri, and anyone wanting to master the platform\n\n`;
           documentEvidence += `---\n\n`;
         } else {
           documentEvidence = '\n\n📚 **Documents Referenced:**\n';
@@ -176,7 +430,6 @@ Keep responses friendly, informative, and focused on helping users understand an
         ...messages,
       ],
       temperature: 0.7,
-      maxTokens: 1000,
     });
 
     return result.toTextStreamResponse();

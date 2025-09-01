@@ -240,6 +240,80 @@ export default function ChatPage() {
                       </div>
                     );
                   }
+                  // Style download resources section
+                  if (line.includes('💾 **Download Kolibri:**')) {
+                    return (
+                      <div key={index} className="bg-teal-50 border-l-4 border-teal-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-teal-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style download content (links and platform info)
+                  if (line.includes('🔗 Official Download Page:') || 
+                      line.includes('📱 Available Platforms:') ||
+                      line.includes('🌍 Language Support:')) {
+                    return (
+                      <div key={index} className="bg-teal-50 border-l-4 border-teal-400 p-3 mb-3 rounded-r">
+                        <p className="text-teal-800 mb-2">{parseMarkdownLinks(line)}</p>
+                      </div>
+                    );
+                  }
+                  // Style resource/library section
+                  if (line.includes('📚 **Kolibri Library & Resources:**')) {
+                    return (
+                      <div key={index} className="bg-orange-50 border-l-4 border-orange-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-orange-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style Studio/curation section
+                  if (line.includes('🎨 **Kolibri Studio - Content Creation & Curation:**')) {
+                    return (
+                      <div key={index} className="bg-pink-50 border-l-4 border-pink-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-pink-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style feedback/community section
+                  if (line.includes('💬 **Community Engagement & Feedback:**')) {
+                    return (
+                      <div key={index} className="bg-emerald-50 border-l-4 border-emerald-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-emerald-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style bug report section
+                  if (line.includes('🐛 **Bug Report & Issue Tracking:**')) {
+                    return (
+                      <div key={index} className="bg-red-50 border-l-4 border-red-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-red-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style technical support section
+                  if (line.includes('🔧 **Technical Support & Assistance:**')) {
+                    return (
+                      <div key={index} className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-blue-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style demo section
+                  if (line.includes('🎮 **Kolibri Demo & Exploration:**')) {
+                    return (
+                      <div key={index} className="bg-violet-50 border-l-4 border-violet-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-violet-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style user guide section
+                  if (line.includes('📖 **Kolibri User Guide & Documentation:**')) {
+                    return (
+                      <div key={index} className="bg-amber-50 border-l-4 border-amber-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-amber-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
                   // Style the training pack folder link specifically
                   if (line.includes('📁 Kolibri Training Pack') && line.includes('[Open Training Folder]')) {
                     return (

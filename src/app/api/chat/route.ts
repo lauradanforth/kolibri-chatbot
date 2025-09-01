@@ -17,6 +17,31 @@ function isTrainingQuestion(content: string): boolean {
   return trainingKeywords.some(keyword => lowerContent.includes(keyword));
 }
 
+// Helper function to detect language-related queries
+function isLanguageQuestion(content: string): boolean {
+  const languageKeywords = [
+    'language', 'languages', 'arabic', 'french', 'hindi', 'marathi', 
+    'portuguese', 'spanish', 'swahili', 'multilingual', 'translation',
+    'other languages', 'available languages', 'language support',
+    'toolkit languages', 'edtech toolkit languages'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return languageKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
+// Helper function to detect general toolkit questions
+function isToolkitQuestion(content: string): boolean {
+  const toolkitKeywords = [
+    'toolkit', 'edtech toolkit', 'what is in the toolkit', 'what does the toolkit contain',
+    'what is available in the toolkit', 'what is the toolkit', 'toolkit contents',
+    'toolkit materials', 'toolkit resources', 'what is kolibri toolkit'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return toolkitKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json();
@@ -28,8 +53,10 @@ export async function POST(req: NextRequest) {
     let documentsUsed: any[] = [];
     
     try {
-      // Check if this is a training-related query
+      // Check if this is a training-related, language-related, or toolkit-related query
       const isTrainingQuery = isTrainingQuestion(userMessage.content);
+      const isLanguageQuery = isLanguageQuestion(userMessage.content);
+      const isToolkitQuery = isToolkitQuestion(userMessage.content);
       
       const relevantDocs = await googleDriveService.getRelevantDocuments(userMessage.content);
       documentsUsed = relevantDocs;
@@ -45,13 +72,32 @@ export async function POST(req: NextRequest) {
         // Special handling for training queries
         if (isTrainingQuery) {
           documentEvidence = '\n\n🎯 **Training Resources Available:**\n\n';
-          documentEvidence += `**📁 Kolibri Training Pack** - [Open Training Folder](https://drive.google.com/drive/folders/1QeDUAAON3dUnKOPdQrkFfTywt_d_7ddG?usp=drive_link)\n\n`;
+          documentEvidence += `**📁 Kolibri Training Pack** - [Open Training Folder](https://drive.google.com/drive/folders/18-_tUxH3rPFxe7HTDCJ8DENq_Kq3eAOL?usp=drive_link)\n\n`;
           documentEvidence += `This comprehensive training resource contains:\n`;
           documentEvidence += `• **Training Manual** - Complete guide for conducting Kolibri training sessions\n`;
           documentEvidence += `• **Training Presentations** - Ready-to-use slide decks for different training contexts\n`;
           documentEvidence += `• **Training Workbook and Handouts** - Materials for participants and facilitators\n`;
           documentEvidence += `• **Program Support** - Additional resources for peer mentoring and coaching\n\n`;
           documentEvidence += `*All materials can be adapted for different training contexts and audiences.*\n\n---\n\n`;
+        } else if (isLanguageQuery) {
+          // Special handling for language queries
+          documentEvidence = '\n\n🌍 **Multilingual Toolkit Available:**\n\n';
+          documentEvidence += `**📁 Kolibri Edtech Toolkit v4** - [Open Multilingual Folder](https://drive.google.com/drive/folders/1s4Dp4SLz0FXcfs5F5yMCkVCD5DKRGayl?usp=drive_link)\n\n`;
+          documentEvidence += `Our comprehensive toolkit is available in multiple languages:\n`;
+          documentEvidence += `• **Arabic** - Arabic language materials and resources\n`;
+          documentEvidence += `• **French** - French language materials and resources\n`;
+          documentEvidence += `• **Hindi** - Hindi language materials and resources\n`;
+          documentEvidence += `• **Marathi** - Marathi language materials and resources\n`;
+          documentEvidence += `• **Portuguese** - Portuguese language materials and resources\n`;
+          documentEvidence += `• **Spanish** - Spanish language materials and resources\n`;
+          documentEvidence += `• **Swahili** - Swahili language materials and resources\n\n`;
+          documentEvidence += `---\n\n`;
+        } else if (isToolkitQuery) {
+          // Special handling for toolkit questions
+          documentEvidence = '\n\n📚 **Kolibri Edtech Toolkit v4:**\n\n';
+          documentEvidence += `**📁 Main Toolkit Folder** - [Open Toolkit](https://drive.google.com/drive/folders/1s4Dp4SLz0FXcfs5F5yMCkVCD5DKRGayl?usp=drive_link)\n\n`;
+          documentEvidence += `**📖 Detailed Information:** [Kolibri Edtech Toolkit v4 README](https://docs.google.com/document/d/1cg5ZnmCs66tGLfNNXWBQLOzmp8VJagjfwKai9fSe3J8/edit?tab=t.0) - Complete overview of toolkit contents, structure, and how to use it\n\n`;
+          documentEvidence += `---\n\n`;
         } else {
           documentEvidence = '\n\n📚 **Documents Referenced:**\n';
           

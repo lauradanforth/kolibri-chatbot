@@ -168,28 +168,28 @@ export default function ChatPage() {
             
             <p>Welcome! I'm here to help you get started with using Kolibri.</p>
             <p className="mt-2">Try asking me something like:</p>
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 flex flex-wrap gap-4 justify-center">
               <button
                 onClick={() => setInput("What assessment types are available in Kolibri?")}
-                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
               >
                 What assessment types are available in Kolibri?
               </button>
               <button
                 onClick={() => setInput("What hardware is needed for Kolibri?")}
-                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
               >
                 What hardware is needed for Kolibri?
               </button>
               <button
                 onClick={() => setInput("How can I train others on using Kolibri?")}
-                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
               >
                 How can I train others on using Kolibri?
               </button>
               <button
                 onClick={() => setInput("Tell me about learner data syncing in Kolibri")}
-                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
               >
                 Tell me about learner data syncing in Kolibri
               </button>
@@ -224,11 +224,37 @@ export default function ChatPage() {
                       </div>
                     );
                   }
+                  // Style language resources section
+                  if (line.includes('🌍 **Multilingual Toolkit Available:**')) {
+                    return (
+                      <div key={index} className="bg-purple-50 border-l-4 border-purple-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-purple-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style toolkit resources section
+                  if (line.includes('📚 **Kolibri Edtech Toolkit v4:**')) {
+                    return (
+                      <div key={index} className="bg-indigo-50 border-l-4 border-indigo-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-indigo-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
                   // Style the training pack folder link specifically
                   if (line.includes('📁 Kolibri Training Pack') && line.includes('[Open Training Folder]')) {
                     return (
                       <div key={index} className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3 rounded-r">
                         <p className="font-semibold text-yellow-800 mb-2">
+                          {parseMarkdownLinks(line)}
+                        </p>
+                      </div>
+                    );
+                  }
+                  // Style the multilingual toolkit folder link specifically
+                  if (line.includes('📁 Kolibri Edtech Toolkit v4') && line.includes('[Open Multilingual Folder]')) {
+                    return (
+                      <div key={index} className="bg-purple-50 border-l-4 border-purple-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-purple-800 mb-2">
                           {parseMarkdownLinks(line)}
                         </p>
                       </div>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Test Kolibri Chat API</h1>
+    <button onclick="testAPI()">Test "Tell me about facility syncing"</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap;"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Testing API...';
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'user', content: 'Tell me about facility syncing' }
+                        ]
+                    })
+                });
+                
+                const data = await response.text();
+                resultDiv.textContent = `Status: ${response.status}\n\nResponse:\n${data}`;
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

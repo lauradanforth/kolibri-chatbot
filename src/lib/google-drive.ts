@@ -298,22 +298,9 @@ export class GoogleDriveService {
         const enhancedResults = [];
         
         for (const result of vectorResults) {
-          try {
-            // Get the full document content from Google Drive
-            const fullContent = await this.getDocumentContent(result.documentId, 'application/vnd.google-apps.document');
-            
-            enhancedResults.push({
-              id: result.documentId,
-              name: result.documentName,
-              parentFolder: result.parentFolder,
-              content: fullContent, // Use full content instead of chunked content
-              relevanceScore: result.similarity,
-              searchMethod: 'vector',
-              webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`,
-            });
-          } catch (error) {
-            console.warn(`Failed to get full content for ${result.documentName}:`, error);
-            // Fall back to the chunked content if full content retrieval fails
+          // Handle User Guide results differently from Google Drive results
+          if (result.source === 'kolibri-user-guide') {
+            // User Guide chunks already have content, no need to fetch from Google Drive
             enhancedResults.push({
               id: result.documentId,
               name: result.documentName,
@@ -321,8 +308,35 @@ export class GoogleDriveService {
               content: result.content,
               relevanceScore: result.similarity,
               searchMethod: 'vector',
-              webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`,
+              webViewLink: result.url || '#', // Use the User Guide URL if available
             });
+          } else {
+            // Google Drive results need full content retrieval
+            try {
+              const fullContent = await this.getDocumentContent(result.documentId, 'application/vnd.google-apps.document');
+              
+              enhancedResults.push({
+                id: result.documentId,
+                name: result.documentName,
+                parentFolder: result.parentFolder,
+                content: fullContent, // Use full content instead of chunked content
+                relevanceScore: result.similarity,
+                searchMethod: 'vector',
+                webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`,
+              });
+            } catch (error) {
+              console.warn(`Failed to get full content for ${result.documentName}:`, error);
+              // Fall back to the chunked content if full content retrieval fails
+              enhancedResults.push({
+                id: result.documentId,
+                name: result.documentName,
+                parentFolder: result.parentFolder,
+                content: result.content,
+                relevanceScore: result.similarity,
+                searchMethod: 'vector',
+                webViewLink: `https://drive.google.com/file/d/${result.documentId}/view`,
+              });
+            }
           }
         }
         

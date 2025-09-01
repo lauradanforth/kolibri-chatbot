@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Streaming Test</title>
+</head>
+<body>
+    <h1>Test Streaming Response</h1>
+    <button onclick="testStreaming()">Test Streaming "Tell me about facility syncing"</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"></div>
+
+    <script>
+        async function testStreaming() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Testing streaming response...\n\n';
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'user', content: 'Tell me about facility syncing' }
+                        ]
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                resultDiv.textContent += `Status: ${response.status}\nResponse OK: ${response.ok}\n\n`;
+                
+                const reader = response.body?.getReader();
+                if (!reader) {
+                    throw new Error('No response body');
+                }
+                
+                const decoder = new TextDecoder();
+                let fullText = '';
+                let chunkCount = 0;
+                
+                resultDiv.textContent += 'Starting to read stream...\n\n';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        resultDiv.textContent += `\n--- STREAM COMPLETE ---\nTotal chunks: ${chunkCount}\nTotal length: ${fullText.length}\n`;
+                        break;
+                    }
+                    
+                    const chunk = decoder.decode(value);
+                    fullText += chunk;
+                    chunkCount++;
+                    
+                    resultDiv.textContent += `Chunk ${chunkCount}: ${chunk.length} chars\n`;
+                    resultDiv.textContent += `Full text so far: ${fullText.length} chars\n\n`;
+                    
+                    // Show the last 200 characters of accumulated text
+                    const lastChars = fullText.slice(-200);
+                    resultDiv.textContent += `Last 200 chars: ${lastChars}\n\n`;
+                    
+                    // Auto-scroll to bottom
+                    resultDiv.scrollTop = resultDiv.scrollHeight;
+                }
+                
+            } catch (error) {
+                resultDiv.textContent += `Error: ${error.message}\n`;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

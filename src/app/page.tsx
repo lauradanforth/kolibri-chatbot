@@ -20,6 +20,44 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Function to parse markdown links and make them clickable
+  const parseMarkdownLinks = (text: string) => {
+    // Match markdown links: [text](url)
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      // Add text before the link
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+
+      // Add the clickable link
+      parts.push(
+        <a
+          key={`link-${match.index}`}
+          href={match[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          {match[1]}
+        </a>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text after the last link
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -119,6 +157,15 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-8">
+            {/* Kolibri WIZARD Logo */}
+            <div className="flex justify-center items-center mb-6">
+              <img 
+                src="/kolibri-logo.png" 
+                alt="Kolibri WIZARD Logo" 
+                className="h-24 w-auto"
+              />
+            </div>
+            
             <p>Welcome! I'm here to help you get started with using Kolibri.</p>
             <p className="mt-2">Try asking me something like:</p>
             <div className="mt-4 space-y-2">
@@ -169,6 +216,24 @@ export default function ChatPage() {
             >
               <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none">
                 {message.content.split('\n').map((line, index) => {
+                  // Style training resources section
+                  if (line.includes('🎯 **Training Resources Available:**')) {
+                    return (
+                      <div key={index} className="bg-green-50 border-l-4 border-green-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-green-900 mb-2">{line}</p>
+                      </div>
+                    );
+                  }
+                  // Style the training pack folder link specifically
+                  if (line.includes('📁 Kolibri Training Pack') && line.includes('[Open Training Folder]')) {
+                    return (
+                      <div key={index} className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3 rounded-r">
+                        <p className="font-semibold text-yellow-800 mb-2">
+                          {parseMarkdownLinks(line)}
+                        </p>
+                      </div>
+                    );
+                  }
                   // Style document references section
                   if (line.includes('📚 **Documents Referenced:**')) {
                     return (
@@ -181,7 +246,7 @@ export default function ChatPage() {
                   if (line.includes('• **') && line.includes('[View Document]')) {
                     return (
                       <p key={index} className="text-blue-700 hover:text-blue-900 mb-1">
-                        {line}
+                        {parseMarkdownLinks(line)}
                       </p>
                     );
                   }
@@ -189,8 +254,8 @@ export default function ChatPage() {
                   if (line.includes('---')) {
                     return <hr key={index} className="my-3 border-gray-300" />;
                   }
-                  // Regular text
-                  return <p key={index} className="mb-1">{line}</p>;
+                  // Regular text with markdown link parsing
+                  return <p key={index} className="mb-1">{parseMarkdownLinks(line)}</p>;
                 })}
               </div>
             </div>

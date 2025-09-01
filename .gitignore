@@ -54,3 +54,4 @@ temp/
 
 # Vector search index data
 data/
+.vercel

@@ -2,7 +2,7 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { NextRequest } from 'next/server';
 import { googleDriveService } from '@/lib/google-drive';
-import { findRelevantSections } from '@/lib/kolibri-guide-sections';
+import { aiSDKVectorSearchService } from '@/lib/ai-sdk-vector-search';
 
 // Helper function to detect training-related queries
 function isTrainingQuestion(content: string): boolean {
@@ -174,34 +174,42 @@ export async function POST(req: NextRequest) {
       
       const relevantDocs = await googleDriveService.getRelevantDocuments(userMessage.content);
       
-      // Find relevant Kolibri User Guide sections
-      const relevantGuideSections = findRelevantSections(userMessage.content);
+      // Find relevant documents using enhanced vector search (Google Drive + User Guide)
+      let relevantUserGuideDocs: any[] = [];
+      try {
+        const vectorSearchResults = await aiSDKVectorSearchService.searchDocuments(userMessage.content, 10);
+        relevantUserGuideDocs = vectorSearchResults
+          .filter(result => result.source === 'kolibri-user-guide')
+          .map(result => ({
+            id: result.documentId,
+            name: result.documentName,
+            content: result.content,
+            webViewLink: result.url || '#',
+            parentFolder: result.parentSection || 'Kolibri User Guide',
+            relevanceScore: result.similarity,
+            searchMethod: 'vector-search'
+          }));
+      } catch (error) {
+        console.warn('⚠️ Vector search failed, falling back to Google Drive only:', error);
+      }
       
-      console.log(`🔍 Guide sections search for: "${userMessage.content}"`);
-      console.log(`🔍 Found ${relevantGuideSections.length} relevant guide sections:`);
-      relevantGuideSections.forEach((section, index) => {
-        console.log(`  ${index + 1}. ${section.title} - ${section.url}`);
+      console.log(`🔍 Vector search results for: "${userMessage.content}"`);
+      console.log(`🔍 Found ${relevantUserGuideDocs.length} relevant User Guide documents:`);
+      relevantUserGuideDocs.forEach((doc, index) => {
+        console.log(`  ${index + 1}. ${doc.name} - ${doc.parentFolder}`);
       });
       
       // Combine both sources of information
       const allRelevantDocs = [...relevantDocs];
       
-      // Add relevant guide sections as "documents" for context
-      relevantGuideSections.forEach((section, index) => {
-        allRelevantDocs.push({
-          id: `guide-${section.id}`,
-          name: section.title,
-          content: section.description,
-          webViewLink: section.url,
-          parentFolder: 'Kolibri User Guide',
-          relevanceScore: 1.0,
-          searchMethod: 'guide-section'
-        });
+      // Add relevant User Guide documents
+      relevantUserGuideDocs.forEach((doc) => {
+        allRelevantDocs.push(doc);
       });
       
       documentsUsed = allRelevantDocs;
       
-      console.log(`🔍 Found ${allRelevantDocs.length} total relevant sources (${relevantDocs.length} Google Drive + ${relevantGuideSections.length} Guide Sections)`);
+      console.log(`🔍 Found ${allRelevantDocs.length} total relevant sources (${relevantDocs.length} Google Drive + ${relevantUserGuideDocs.length} User Guide)`);
       allRelevantDocs.forEach((doc, i) => {
         console.log(`  ${i + 1}. ${doc.name} (${doc.content?.length || 0} chars) - ${doc.parentFolder}`);
       });
@@ -328,15 +336,13 @@ export async function POST(req: NextRequest) {
           documentEvidence += `---\n\n`;
         } else if (isUserGuideQuery) {
           // Special handling for user guide/manual queries
-          const relevantSections = findRelevantSections(userMessage.content);
-          
           documentEvidence = '\n\n📖 **Kolibri User Guide & Documentation:**\n\n';
           documentEvidence += `**🔗 Official User Guide:** [Kolibri User Guide](https://kolibri.readthedocs.io/en/latest/) - Comprehensive documentation for setup and usage\n\n`;
           
-          if (relevantSections.length > 0) {
+          if (relevantUserGuideDocs.length > 0) {
             documentEvidence += `**🎯 Most Relevant Sections for Your Query:**\n`;
-            relevantSections.forEach(section => {
-              documentEvidence += `• **[${section.title}](${section.url})** - ${section.description}\n`;
+            relevantUserGuideDocs.forEach(doc => {
+              documentEvidence += `• **[${doc.name}](${doc.webViewLink})** - ${doc.content.substring(0, 100)}...\n`;
             });
             documentEvidence += `\n`;
           }

@@ -79,7 +79,7 @@ export default function ChatPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: [userMessage], // Send only current message to avoid conversation context issues
         }),
       });
 

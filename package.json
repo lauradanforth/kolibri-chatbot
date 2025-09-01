@@ -5,13 +5,21 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start",
+    "index:user-guide": "tsx src/scripts/index-user-guide.ts",
+    "index:all": "npm run index:user-guide",
+    "index:update": "npm run index:user-guide",
+    "generate:embeddings": "tsx src/scripts/generate-embeddings.ts",
+    "embeddings:user-guide": "npm run generate:embeddings",
+    "setup:user-guide": "tsx src/scripts/setup-user-guide-vector-search.ts",
+    "setup:complete": "npm run setup:user-guide"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.19",
     "ai": "^5.0.22",
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",
+    "dotenv": "^17.2.1",
     "google-auth-library": "^10.2.1",
     "googleapis": "^157.0.0",
     "next": "15.5.0",
@@ -25,6 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
+    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }

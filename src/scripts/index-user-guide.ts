@@ -126,4 +126,5 @@ if (require.main === module) {
   });
 }
 
-export { indexUserGuide, IndexingResult };
+export { indexUserGuide };
+export type { IndexingResult };

@@ -221,6 +221,7 @@ export class AISDKVectorSearchService {
           id: `${documentId}-chunk-${chunkIndex}`,
           content: currentChunk.trim(),
           metadata: {
+            source: 'google-drive' as const,
             documentId,
             documentName,
             chunkIndex,
@@ -241,6 +242,7 @@ export class AISDKVectorSearchService {
         id: `${documentId}-chunk-${chunkIndex}`,
         content: currentChunk.trim(),
         metadata: {
+          source: 'google-drive' as const,
           documentId,
           documentName,
           chunkIndex,

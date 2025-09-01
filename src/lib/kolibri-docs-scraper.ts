@@ -148,7 +148,7 @@ export class KolibriDocsScraper {
   /**
    * Extract clean text content from HTML
    */
-  private extractCleanText(element: cheerio.Cheerio): string {
+  private extractCleanText(element: cheerio.Cheerio<any>): string {
     // Remove navigation, headers, footers, and other non-content elements
     element.find('nav, header, footer, .navigation, .sidebar, .toc, script, style').remove();
     

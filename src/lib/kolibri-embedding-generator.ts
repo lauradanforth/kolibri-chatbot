@@ -231,7 +231,7 @@ export class KolibriEmbeddingGenerator {
           successfulEmbeddings: embeddings.size,
           generatedAt: new Date().toISOString(),
           model: 'text-embedding-3-small',
-          embeddingDimensions: embeddings.size > 0 ? embeddings.values().next().value.length : 0
+          embeddingDimensions: embeddings.size > 0 ? (embeddings.values().next().value?.length || 0) : 0
         },
         embeddings: Object.fromEntries(embeddings)
       };

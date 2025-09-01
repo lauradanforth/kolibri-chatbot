@@ -3,6 +3,20 @@ import { streamText } from 'ai';
 import { NextRequest } from 'next/server';
 import { googleDriveService } from '@/lib/google-drive';
 
+// Helper function to detect training-related queries
+function isTrainingQuestion(content: string): boolean {
+  const trainingKeywords = [
+    'train', 'training', 'teach', 'teaching', 'instruct', 'instruction',
+    'facilitate', 'facilitation', 'workshop', 'session', 'course',
+    'educate', 'education', 'mentor', 'mentoring', 'coach', 'coaching',
+    'how to train', 'how to teach', 'how to instruct', 'training others',
+    'training materials', 'training resources', 'training guide'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return trainingKeywords.some(keyword => lowerContent.includes(keyword));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json();
@@ -14,6 +28,9 @@ export async function POST(req: NextRequest) {
     let documentsUsed: any[] = [];
     
     try {
+      // Check if this is a training-related query
+      const isTrainingQuery = isTrainingQuestion(userMessage.content);
+      
       const relevantDocs = await googleDriveService.getRelevantDocuments(userMessage.content);
       documentsUsed = relevantDocs;
       
@@ -24,27 +41,40 @@ export async function POST(req: NextRequest) {
       
       if (relevantDocs.length > 0) {
         contextDocuments = '\n\nRelevant documents from Kolibri documentation:\n';
-        documentEvidence = '\n\n📚 **Documents Referenced:**\n';
         
-        relevantDocs.forEach((doc, index) => {
-          contextDocuments += `\n${index + 1}. ${doc.name}`;
-          if (doc.parentFolder && doc.parentFolder !== 'Root Folder') {
-            contextDocuments += ` (in ${doc.parentFolder})`;
-          }
-          contextDocuments += `:\n`;
-          contextDocuments += `${doc.content}\n`;
-          contextDocuments += `Source: ${doc.webViewLink}\n`;
-          
-                  documentEvidence += `• **${doc.name}`;
-        if (doc.parentFolder && doc.parentFolder !== 'Root Folder') {
-          documentEvidence += `** (in ${doc.parentFolder})`;
+        // Special handling for training queries
+        if (isTrainingQuery) {
+          documentEvidence = '\n\n🎯 **Training Resources Available:**\n\n';
+          documentEvidence += `**📁 Kolibri Training Pack** - [Open Training Folder](https://drive.google.com/drive/folders/1QeDUAAON3dUnKOPdQrkFfTywt_d_7ddG?usp=drive_link)\n\n`;
+          documentEvidence += `This comprehensive training resource contains:\n`;
+          documentEvidence += `• **Training Manual** - Complete guide for conducting Kolibri training sessions\n`;
+          documentEvidence += `• **Training Presentations** - Ready-to-use slide decks for different training contexts\n`;
+          documentEvidence += `• **Training Workbook and Handouts** - Materials for participants and facilitators\n`;
+          documentEvidence += `• **Program Support** - Additional resources for peer mentoring and coaching\n\n`;
+          documentEvidence += `*All materials can be adapted for different training contexts and audiences.*\n\n---\n\n`;
         } else {
-          documentEvidence += `**`;
+          documentEvidence = '\n\n📚 **Documents Referenced:**\n';
+          
+          relevantDocs.forEach((doc, index) => {
+            contextDocuments += `\n${index + 1}. ${doc.name}`;
+            if (doc.parentFolder && doc.parentFolder !== 'Root Folder') {
+              contextDocuments += ` (in ${doc.parentFolder})`;
+            }
+            contextDocuments += `:\n`;
+            contextDocuments += `${doc.content}\n`;
+            contextDocuments += `Source: ${doc.webViewLink}\n`;
+            
+            documentEvidence += `• **${doc.name}`;
+            if (doc.parentFolder && doc.parentFolder !== 'Root Folder') {
+              documentEvidence += `** (in ${doc.parentFolder})`;
+            } else {
+              documentEvidence += `**`;
+            }
+            documentEvidence += ` - [View Document](${doc.webViewLink})\n\n`;
+          });
+          
+          documentEvidence += `\n*I found ${relevantDocs.length} relevant document(s) from your Kolibri documentation folder.*\n\n---\n\n`;
         }
-        documentEvidence += ` - [View Document](${doc.webViewLink})\n\n`;
-        });
-        
-        documentEvidence += `\n*I found ${relevantDocs.length} relevant document(s) from your Kolibri documentation folder.*\n\n---\n\n`;
       } else {
         // No documents found - tell the user
         return new Response(JSON.stringify({
@@ -89,6 +119,7 @@ IMPORTANT RULES:
 5. YOUR RESPONSE MUST START WITH THIS EXACT TEXT: ${documentEvidence}
 6. After the document evidence, provide your answer based on the documents with proper paragraph spacing
 7. Format your response with clear separation between the document references and your answer
+8. For training-related queries, emphasize the comprehensive nature of the Training Pack and its adaptability
 
 Keep responses friendly, informative, and focused on helping users understand and use Kolibri effectively based on the official documentation.`;
 

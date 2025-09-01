@@ -4,7 +4,10 @@ import { GoogleAuth } from 'google-auth-library';
 import { aiSDKVectorSearchService } from './ai-sdk-vector-search';
 
 // Google Drive API configuration
-const FOLDER_ID = '11OBGEVcpY_e3wkWIbYf51yZiAz_-JIsV';
+const FOLDER_IDS = [
+  '11OBGEVcpY_e3wkWIbYf51yZiAz_-JIsV', // Current folder
+  '183II-4V8K4s7IR2-5NW1P3EiuQAODZl6', // English Training Packs folder
+];
 
 export interface DriveDocument {
   id: string;
@@ -45,14 +48,27 @@ export class GoogleDriveService {
 
   async listDocuments(): Promise<DriveDocument[]> {
     try {
-      return await this.listDocumentsRecursive(FOLDER_ID, '');
+      const allDocuments: DriveDocument[] = [];
+      
+      for (const folderId of FOLDER_IDS) {
+        const folderDocs = await this.listDocumentsRecursive(folderId, '');
+        allDocuments.push(...folderDocs);
+      }
+      
+      return allDocuments;
     } catch (error: any) {
       console.error('Error listing documents:', error.message);
       throw new Error(`Failed to list documents from Google Drive: ${error.message}`);
     }
   }
 
-  private async listDocumentsRecursive(folderId: string, parentPath: string): Promise<DriveDocument[]> {
+  private async listDocumentsRecursive(folderId: string, parentPath: string, depth: number = 0): Promise<DriveDocument[]> {
+    // Prevent infinite recursion by limiting depth
+    if (depth > 10) {
+      console.warn(`⚠️ Maximum folder depth (10) reached for ${parentPath}, stopping recursion`);
+      return [];
+    }
+    
     const allDocuments: DriveDocument[] = [];
     
     try {
@@ -62,6 +78,7 @@ export class GoogleDriveService {
         orderBy: 'name',
         supportsAllDrives: true,
         includeItemsFromAllDrives: true,
+        corpora: 'allDrives', // This enables access to shared drives
       });
 
       const files = response.data.files || [];
@@ -70,8 +87,8 @@ export class GoogleDriveService {
         const currentPath = parentPath ? `${parentPath}/${file.name}` : file.name;
         
         if (file.mimeType === 'application/vnd.google-apps.folder') {
-          // Recursively search subfolders
-          const subfolderDocs = await this.listDocumentsRecursive(file.id, currentPath);
+          // Recursively search subfolders with depth tracking
+          const subfolderDocs = await this.listDocumentsRecursive(file.id, currentPath, depth + 1);
           allDocuments.push(...subfolderDocs);
         } else {
           // Add document with parent folder information
@@ -222,18 +239,36 @@ export class GoogleDriveService {
       console.log('🔄 Indexing documents for vector search...');
       
       const documents = await this.listDocuments();
+      console.log(`📁 Found ${documents.length} total documents to process`);
+      
+      // Limit the number of documents to prevent overwhelming the system
+      const maxDocuments = 100; // Process max 100 documents at once
+      const documentsToProcess = documents.slice(0, maxDocuments);
+      
+      if (documents.length > maxDocuments) {
+        console.log(`⚠️ Limiting processing to first ${maxDocuments} documents out of ${documents.length} total`);
+      }
+      
       const documentsWithContent = [];
       
-      for (const doc of documents) {
+      for (const [index, doc] of documentsToProcess.entries()) {
         try {
+          console.log(`📄 Processing document ${index + 1}/${documentsToProcess.length}: ${doc.name}`);
           const content = await this.getDocumentContent(doc.id, doc.mimeType);
-          if (content && content.length > 50) { // Only index substantial content
+          
+          // Filter content: must be substantial but not too long
+          if (content && content.length > 50 && content.length < 10000) {
+            // Truncate very long content to prevent token issues
+            const truncatedContent = content.length > 5000 ? content.substring(0, 5000) + '...' : content;
+            
             documentsWithContent.push({
               id: doc.id,
               name: doc.name,
-              content,
+              content: truncatedContent,
               parentFolder: doc.parentFolder,
             });
+          } else if (content && content.length >= 10000) {
+            console.log(`⚠️ Skipping ${doc.name} - content too long (${content.length} chars)`);
           }
         } catch (error) {
           console.warn(`Failed to get content for ${doc.name}:`, error);
@@ -318,6 +353,96 @@ export class GoogleDriveService {
     
     // Fallback to original keyword search
     return this.searchDocuments(query);
+  }
+
+  /**
+   * Test access to a specific folder and return detailed information
+   */
+  async testFolderAccess(folderId: string) {
+    try {
+      console.log(`🔍 Testing access to folder: ${folderId}`);
+      
+      // First, try to get basic folder info
+      const folderResponse = await this.drive.files.get({
+        fileId: folderId,
+        fields: 'id,name,mimeType,webViewLink,parents',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      });
+      
+      const folderName = folderResponse.data.name || 'Unknown Folder';
+      console.log(`✅ Folder accessible: ${folderName}`);
+      
+      // Now list all contents
+      const contentsResponse = await this.drive.files.list({
+        q: `'${folderId}' in parents and trashed=false`,
+        fields: 'files(id,name,mimeType,webViewLink)',
+        orderBy: 'name',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        corpora: 'allDrives',
+      });
+      
+      const files = contentsResponse.data.files || [];
+      const documents = [];
+      const subfolders = [];
+      
+      for (const file of files) {
+        if (file.mimeType === 'application/vnd.google-apps.folder') {
+          subfolders.push({
+            id: file.id,
+            name: file.name,
+            webViewLink: file.webViewLink
+          });
+        } else {
+          documents.push({
+            id: file.id,
+            name: file.name,
+            mimeType: file.mimeType,
+            webViewLink: file.webViewLink
+          });
+        }
+      }
+      
+      return {
+        accessible: true,
+        folderName,
+        documentCount: documents.length,
+        subfolderCount: subfolders.length,
+        documents,
+        subfolders,
+        webViewLink: folderResponse.data.webViewLink
+      };
+      
+    } catch (error: any) {
+      console.error(`❌ Error accessing folder ${folderId}:`, error.message);
+      return {
+        accessible: false,
+        error: error.message,
+        folderName: 'Unknown',
+        documentCount: 0,
+        subfolderCount: 0,
+        documents: [],
+        subfolders: []
+      };
+    }
+  }
+
+  /**
+   * Test access to all configured folders
+   */
+  async testAllFolderAccess() {
+    const results = [];
+    
+    for (const folderId of FOLDER_IDS) {
+      const result = await this.testFolderAccess(folderId);
+      results.push({
+        folderId,
+        ...result
+      });
+    }
+    
+    return results;
   }
 
   private extractKeyTerms(query: string): string[] {

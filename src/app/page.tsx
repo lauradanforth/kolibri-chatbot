@@ -135,10 +135,10 @@ export default function ChatPage() {
                 What hardware is needed for Kolibri?
               </button>
               <button
-                onClick={() => setInput("What is an example of Project Based Learning with Kolibri?")}
+                onClick={() => setInput("How can I train others on using Kolibri?")}
                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm transition-colors"
               >
-                What is an example of Project Based Learning with Kolibri?
+                How can I train others on using Kolibri?
               </button>
               <button
                 onClick={() => setInput("Tell me about learner data syncing in Kolibri")}

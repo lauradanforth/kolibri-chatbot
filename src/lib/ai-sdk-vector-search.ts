@@ -89,13 +89,26 @@ export class AISDKVectorSearchService {
    */
   private splitIntoChunks(content: string, documentId: string, documentName: string, parentFolder?: string): DocumentChunk[] {
     const chunks: DocumentChunk[] = [];
-    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
     
+    // Clean and normalize content
+    const cleanContent = content
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/[^\w\s.!?,-]/g, '') // Remove special characters that might cause token issues
+      .trim();
+    
+    // Split into smaller chunks (300 characters max to stay well under token limits)
+    const maxChunkSize = 300;
     let currentChunk = '';
     let chunkIndex = 0;
     
+    // Split by sentences first, then by words if needed
+    const sentences = cleanContent.split(/[.!?]+/).filter(s => s.trim().length > 5);
+    
     for (const sentence of sentences) {
-      if ((currentChunk + sentence).length > 500 && currentChunk.length > 0) {
+      const sentenceTrimmed = sentence.trim();
+      
+      if ((currentChunk + ' ' + sentenceTrimmed).length > maxChunkSize && currentChunk.length > 0) {
+        // Current chunk is full, save it
         chunks.push({
           id: `${documentId}-chunk-${chunkIndex}`,
           content: currentChunk.trim(),
@@ -106,13 +119,15 @@ export class AISDKVectorSearchService {
             parentFolder,
           },
         });
-        currentChunk = sentence;
+        currentChunk = sentenceTrimmed;
         chunkIndex++;
       } else {
-        currentChunk += (currentChunk ? ' ' : '') + sentence;
+        // Add sentence to current chunk
+        currentChunk += (currentChunk ? ' ' : '') + sentenceTrimmed;
       }
     }
     
+    // Add the last chunk if it has content
     if (currentChunk.trim()) {
       chunks.push({
         id: `${documentId}-chunk-${chunkIndex}`,

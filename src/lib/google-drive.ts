@@ -25,15 +25,31 @@ export class GoogleDriveService {
   private documentCache: Map<string, string> = new Map();
 
   constructor() {
-    // Use service account authentication with the JSON key file
+    // Prefer explicit service-account env vars when available (safer for serverless)
+    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const serviceAccountPrivateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+
+    // Fallback to key file (works locally); relative to project root
     const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || './learninge-291168aade81.json';
-    const auth = new GoogleAuth({
-      keyFile,
-      scopes: [
-        'https://www.googleapis.com/auth/drive.readonly',
-        'https://www.googleapis.com/auth/documents.readonly'
-      ],
-    });
+
+    const commonScopes = [
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/documents.readonly',
+    ];
+
+    const auth = serviceAccountEmail && serviceAccountPrivateKey
+      ? new GoogleAuth({
+          credentials: {
+            client_email: serviceAccountEmail,
+            // Support escaped newlines when set via env
+            private_key: serviceAccountPrivateKey.replace(/\\n/g, '\n'),
+          },
+          scopes: commonScopes,
+        })
+      : new GoogleAuth({
+          keyFile,
+          scopes: commonScopes,
+        });
 
     this.drive = google.drive({
       version: 'v3',

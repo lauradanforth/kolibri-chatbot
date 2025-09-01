@@ -3,6 +3,7 @@ import { streamText } from 'ai';
 import { NextRequest } from 'next/server';
 import { googleDriveService } from '@/lib/google-drive';
 import { aiSDKVectorSearchService } from '@/lib/ai-sdk-vector-search';
+import { ChatLogger } from '@/lib/chat-logger';
 
 // Helper function to detect training-related queries
 function isTrainingQuestion(content: string): boolean {
@@ -149,8 +150,14 @@ function isUserGuideQuestion(content: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, sessionId } = await req.json();
     const userMessage = messages[messages.length - 1];
+    
+    // Generate session ID if not provided
+    const currentSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Extract user agent from request headers
+    const userAgent = req.headers.get('user-agent');
 
     // Get relevant documents from Google Drive
     let contextDocuments = '';
@@ -436,6 +443,18 @@ Keep responses friendly, informative, and focused on helping users understand an
         ...messages,
       ],
       temperature: 0.7,
+    });
+
+    // Log the chat interaction asynchronously (don't wait for it)
+    ChatLogger.logChatInteraction(req, {
+      sessionId: currentSessionId,
+      userMessage: userMessage.content,
+      assistantResponse: '', // Will be populated after streaming
+      documentsUsed: documentsUsed,
+      modelUsed: 'gpt-3.5-turbo',
+      userAgent: userAgent || undefined
+    }).catch(error => {
+      console.error('Failed to log chat interaction:', error);
     });
 
     return result.toTextStreamResponse();

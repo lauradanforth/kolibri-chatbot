@@ -36,7 +36,7 @@ build/
 Thumbs.db
 
 # Logs
-logs
+/logs
 *.log
 
 # Runtime data
@@ -54,3 +54,4 @@ temp/
 
 # Vector search index data
 data/
+.vercel

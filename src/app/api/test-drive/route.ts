@@ -5,18 +5,12 @@ export async function GET(req: NextRequest) {
   try {
     const documents = await googleDriveService.listDocuments();
     
-    // If no documents found via API, try the fallback method
+    // If no documents found, return empty list
     if (documents.length === 0) {
-      const fallbackDocs = await googleDriveService.listPublicDocuments();
       return new Response(JSON.stringify({
         success: true,
-        documents: fallbackDocs.map(doc => ({
-          name: doc.name,
-          id: doc.id,
-          mimeType: doc.mimeType,
-          webViewLink: doc.webViewLink
-        })),
-        note: "Using fallback document list (public folder access)"
+        documents: [],
+        note: "No documents found in Google Drive folders"
       }), {
         headers: { 'Content-Type': 'application/json' }
       });

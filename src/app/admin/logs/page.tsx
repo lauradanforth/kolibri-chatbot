@@ -8,6 +8,8 @@ interface ConversationStats {
   user_messages: number;
   assistant_messages: number;
   avg_tokens_per_message: number;
+  total_tokens: number;
+  total_cost: number;
   first_conversation: string;
   latest_conversation: string;
 }
@@ -37,7 +39,7 @@ export default function LogsPage() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'stats' | 'history' | 'search'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'history' | 'search' | 'analytics'>('stats');
 
   // Load conversation statistics
   const loadStats = async () => {
@@ -91,6 +93,25 @@ export default function LogsPage() {
     }
   };
 
+  // Export conversations to CSV
+  const exportConversations = async () => {
+    try {
+      const response = await fetch('/api/logs?action=export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chat-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to export conversations:', error);
+      alert('Export failed');
+    }
+  };
+
   // Initialize database
   const initializeDatabase = async () => {
     setLoading(true);
@@ -114,7 +135,7 @@ export default function LogsPage() {
   };
 
   useEffect(() => {
-    if (activeTab === 'stats') {
+    if (activeTab === 'stats' || activeTab === 'analytics') {
       loadStats();
     }
   }, [activeTab]);
@@ -140,15 +161,24 @@ export default function LogsPage() {
 
           {/* Database Initialization */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <button
-              onClick={initializeDatabase}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md"
-            >
-              {loading ? 'Initializing...' : 'Initialize Database'}
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={initializeDatabase}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md"
+              >
+                {loading ? 'Initializing...' : 'Initialize Database'}
+              </button>
+              <button
+                onClick={exportConversations}
+                disabled={loading}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-md"
+              >
+                Export to CSV
+              </button>
+            </div>
             <p className="text-sm text-gray-500 mt-2">
-              Run this once to set up the database tables
+              Initialize database tables or export conversation data
             </p>
           </div>
 
@@ -158,7 +188,8 @@ export default function LogsPage() {
               {[
                 { id: 'stats', label: 'Statistics' },
                 { id: 'history', label: 'Conversation History' },
-                { id: 'search', label: 'Search Conversations' }
+                { id: 'search', label: 'Search Conversations' },
+                { id: 'analytics', label: 'Analytics' }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -207,6 +238,18 @@ export default function LogsPage() {
                   <h3 className="text-lg font-semibold text-indigo-900">Average Tokens per Message</h3>
                   <p className="text-3xl font-bold text-indigo-600">
                     {stats.avg_tokens_per_message ? Math.round(stats.avg_tokens_per_message) : 'N/A'}
+                  </p>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-yellow-900">Total Tokens</h3>
+                  <p className="text-3xl font-bold text-yellow-600">
+                    {stats.total_tokens ? stats.total_tokens.toLocaleString() : 'N/A'}
+                  </p>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-red-900">Total Cost</h3>
+                  <p className="text-3xl font-bold text-red-600">
+                    {stats.total_cost ? `$${stats.total_cost.toFixed(4)}` : 'N/A'}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg col-span-2">
@@ -299,6 +342,95 @@ export default function LogsPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Analytics Tab */}
+            {activeTab === 'analytics' && (
+              <div>
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Conversation Analytics</h3>
+                  
+                  {/* Usage Trends */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-blue-900">Message Distribution</h4>
+                      {stats && (
+                        <div className="mt-2">
+                          <div className="flex justify-between text-sm">
+                            <span>User Messages</span>
+                            <span className="font-medium">{stats.user_messages}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Assistant Messages</span>
+                            <span className="font-medium">{stats.assistant_messages}</span>
+                          </div>
+                          <div className="mt-2 pt-2 border-t border-blue-200">
+                            <div className="flex justify-between text-sm font-medium">
+                              <span>Total Messages</span>
+                              <span>{stats.total_messages}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-green-900">Cost Analysis</h4>
+                      {stats && (
+                        <div className="mt-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Total Tokens</span>
+                            <span className="font-medium">{stats.total_tokens?.toLocaleString() || '0'}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Avg Tokens/Message</span>
+                            <span className="font-medium">{stats.avg_tokens_per_message?.toFixed(1) || '0'}</span>
+                          </div>
+                          <div className="mt-2 pt-2 border-t border-green-200">
+                            <div className="flex justify-between text-sm font-medium">
+                              <span>Total Cost</span>
+                              <span>${stats.total_cost?.toFixed(4) || '0'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Performance Metrics */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-blue-600">{stats?.total_conversations || 0}</div>
+                      <div className="text-sm text-gray-600">Total Conversations</div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-green-600">{stats?.avg_tokens_per_message?.toFixed(0) || 0}</div>
+                      <div className="text-sm text-gray-600">Avg Tokens per Message</div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-purple-600">${stats?.total_cost?.toFixed(4) || '0'}</div>
+                      <div className="text-sm text-gray-600">Total Cost</div>
+                    </div>
+                  </div>
+
+                  {/* Insights */}
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-yellow-900 mb-2">💡 Insights</h4>
+                    <div className="text-sm text-yellow-800 space-y-1">
+                      {stats && (
+                        <>
+                          <p>• {stats.total_conversations} conversations have been logged</p>
+                          <p>• Average conversation length: {stats.total_messages / Math.max(stats.total_conversations, 1) | 0} messages</p>
+                          <p>• Cost per conversation: ${(stats.total_cost / Math.max(stats.total_conversations, 1)).toFixed(4)}</p>
+                          {stats.total_cost > 0 && (
+                            <p>• Token efficiency: {((stats.total_tokens / Math.max(stats.total_messages, 1)) / 1000).toFixed(2)}K tokens per message</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

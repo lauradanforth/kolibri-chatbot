@@ -55,3 +55,4 @@ temp/
 # Vector search index data
 data/
 .vercel
+.env*.local

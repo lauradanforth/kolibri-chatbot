@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     tokens_used INTEGER,
     model_used VARCHAR(100),
+    estimated_cost DECIMAL(10,6) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

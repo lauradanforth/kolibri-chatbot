@@ -47,9 +47,46 @@ export default function TestLoggingPage() {
         setResponse(fullResponse);
       }
 
-      // Generate a new session ID for the next message
-      if (!sessionId) {
-        setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+      // Generate a new session ID if we don't have one
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        currentSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        setSessionId(currentSessionId);
+      }
+
+      // Log the complete assistant response
+      if (fullResponse && currentSessionId) {
+        try {
+          console.log('Logging assistant response for session:', currentSessionId);
+          
+          // First, ensure the conversation exists by creating it if needed
+          const logResponse = await fetch('/api/logs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: 'log-complete-conversation',
+              sessionId: currentSessionId,
+              userMessage: message,
+              assistantResponse: fullResponse,
+              modelUsed: 'gpt-3.5-turbo'
+            }),
+          });
+          
+          if (logResponse.ok) {
+            const logData = await logResponse.json();
+            console.log('✅ Complete conversation logged successfully:', logData);
+          } else {
+            console.error('❌ Failed to log conversation:', logResponse.status);
+            const errorData = await logResponse.json();
+            console.error('Error details:', errorData);
+          }
+        } catch (error) {
+          console.error('Failed to log conversation:', error);
+        }
+      } else {
+        console.warn('Cannot log conversation:', { fullResponse: !!fullResponse, sessionId: currentSessionId });
       }
 
     } catch (error) {

@@ -445,18 +445,20 @@ Keep responses friendly, informative, and focused on helping users understand an
       temperature: 0.7,
     });
 
-    // Log the chat interaction asynchronously (don't wait for it)
-    ChatLogger.logChatInteraction(req, {
-      sessionId: currentSessionId,
-      userMessage: userMessage.content,
-      assistantResponse: '', // Will be populated after streaming
-      documentsUsed: documentsUsed,
-      modelUsed: 'gpt-3.5-turbo',
-      userAgent: userAgent || undefined
-    }).catch(error => {
-      console.error('Failed to log chat interaction:', error);
+    // Log the user message first
+    const conversationId = await ChatLogger.logUserMessage(
+      req,
+      currentSessionId,
+      userMessage.content,
+      userAgent || undefined
+    ).catch(error => {
+      console.error('Failed to log user message:', error);
+      return null;
     });
 
+    // For now, return the streaming response without logging the assistant response
+    // TODO: Implement proper stream capture and logging
+    // The current approach only logs user messages due to streaming limitations
     return result.toTextStreamResponse();
   } catch (error) {
     console.error('Chat API error:', error);

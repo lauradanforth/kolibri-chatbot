@@ -38,6 +38,15 @@ export async function GET(req: NextRequest) {
         const searchResults = await ChatLogger.searchConversations(searchTerm, limit);
         return NextResponse.json({ success: true, data: searchResults });
 
+      case 'export':
+        // Export conversations to CSV
+        const exportData = await ChatLogger.exportConversations();
+        const csvContent = exportData;
+        const response = new NextResponse(csvContent);
+        response.headers.set('Content-Type', 'text/csv');
+        response.headers.set('Content-Disposition', `attachment; filename="chat-logs-${new Date().toISOString().split('T')[0]}.csv"`);
+        return response;
+
       default:
         // Return available actions
         return NextResponse.json({
@@ -46,7 +55,8 @@ export async function GET(req: NextRequest) {
           availableActions: [
             'GET /api/logs?action=stats - Get conversation statistics',
             'GET /api/logs?action=history&sessionId=<id> - Get conversation history',
-            'GET /api/logs?action=search&search=<term> - Search conversations'
+            'GET /api/logs?action=search&search=<term> - Search conversations',
+            'GET /api/logs?action=export - Export conversations to CSV'
           ]
         });
     }
@@ -62,23 +72,92 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/logs - Initialize database (admin only)
+// POST /api/logs - Initialize database and log assistant responses
 export async function POST(req: NextRequest) {
   try {
-    const { action } = await req.json();
+    const { action, sessionId, content, userMessage, assistantResponse, modelUsed } = await req.json();
 
-    if (action === 'initialize') {
-      await ChatLogger.initialize();
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Database initialized successfully' 
-      });
+    switch (action) {
+      case 'initialize':
+        await ChatLogger.initialize();
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Database initialized successfully' 
+        });
+
+      case 'log-complete-conversation':
+        console.log('📝 Received complete conversation logging request:', { sessionId, userMessageLength: userMessage?.length, assistantResponseLength: assistantResponse?.length, modelUsed });
+        
+        if (!sessionId || !userMessage || !assistantResponse) {
+          console.error('❌ Missing required fields:', { sessionId: !!sessionId, userMessage: !!userMessage, assistantResponse: !!assistantResponse });
+          return NextResponse.json(
+            { error: 'sessionId, userMessage, and assistantResponse are required for log-complete-conversation' },
+            { status: 400 }
+          );
+        }
+        
+        try {
+          // Log the complete conversation (user message + assistant response)
+          const result = await ChatLogger.logCompleteConversation(
+            sessionId,
+            userMessage,
+            assistantResponse,
+            modelUsed || 'gpt-3.5-turbo'
+          );
+          
+          console.log('✅ Complete conversation logged successfully:', result);
+          return NextResponse.json({ 
+            success: true, 
+            message: 'Complete conversation logged successfully',
+            data: result
+          });
+        } catch (error) {
+          console.error('❌ Failed to log complete conversation:', error);
+          return NextResponse.json(
+            { error: 'Failed to log complete conversation', details: error instanceof Error ? error.message : 'Unknown error' },
+            { status: 500 }
+          );
+        }
+
+      case 'log-assistant-response':
+        console.log('📝 Received assistant response logging request:', { sessionId, contentLength: content?.length, modelUsed });
+        
+        if (!sessionId || !content) {
+          console.error('❌ Missing required fields:', { sessionId: !!sessionId, content: !!content });
+          return NextResponse.json(
+            { error: 'sessionId and content are required for log-assistant-response' },
+            { status: 400 }
+          );
+        }
+        
+        try {
+          // Find the conversation by session ID and log the assistant response
+          const result = await ChatLogger.logAssistantResponseBySession(
+            sessionId,
+            content,
+            modelUsed || 'gpt-3.5-turbo'
+          );
+          
+          console.log('✅ Assistant response logged successfully:', result);
+          return NextResponse.json({ 
+            success: true, 
+            message: 'Assistant response logged successfully',
+            data: result
+          });
+        } catch (error) {
+          console.error('❌ Failed to log assistant response:', error);
+          return NextResponse.json(
+            { error: 'Failed to log assistant response', details: error instanceof Error ? error.message : 'Unknown error' },
+            { status: 500 }
+          );
+        }
+
+      default:
+        return NextResponse.json(
+          { error: 'Invalid action' },
+          { status: 400 }
+        );
     }
-
-    return NextResponse.json(
-      { error: 'Invalid action' },
-      { status: 400 }
-    );
   } catch (error) {
     console.error('Logs API initialization error:', error);
     return NextResponse.json(

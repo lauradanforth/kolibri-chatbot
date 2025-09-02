@@ -224,10 +224,10 @@ export class DatabaseService {
       
       if (error) throw error;
       
-      return data?.map(item => ({
+      return data?.map((item: any) => ({
         conversation_id: item.conversation_id,
-        session_id: item.conversations.session_id,
-        created_at: item.conversations.created_at,
+        session_id: item.conversations?.session_id,
+        created_at: item.conversations?.created_at,
         content: item.content,
         role: item.role
       })) || [];
@@ -257,16 +257,16 @@ export class DatabaseService {
       
       if (error) throw error;
       
-      return data?.map(item => ({
+      return data?.map((item: any) => ({
         conversation_id: item.conversation_id,
-        session_id: item.conversations.session_id,
+        session_id: item.conversations?.session_id,
         role: item.role,
         content: item.content,
         tokens_used: item.tokens_used,
         estimated_cost: item.estimated_cost,
         model_used: item.model_used,
         created_at: item.created_at,
-        documents_used: item.context_used?.map(c => c.document_name) || []
+        documents_used: item.context_used?.map((c: any) => c.document_name) || []
       })) || [];
     } catch (error) {
       console.error('❌ Failed to export conversations:', error);
